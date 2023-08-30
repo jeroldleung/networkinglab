@@ -15,9 +15,11 @@ protected:
   // Please add any additional state to the ByteStream here, and not to the Writer and Reader interfaces.
   std::queue<std::string> buffer_;
   uint64_t nbytes_;
+  uint64_t nbytes_pushed_;
+  uint64_t nbytes_popped_;
 
-  bool closed_;
-  bool error_;
+  bool is_closed_;
+  bool has_error_;
 
 public:
   explicit ByteStream( uint64_t capacity );
