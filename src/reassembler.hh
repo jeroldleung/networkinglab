@@ -7,7 +7,13 @@
 
 class Reassembler
 {
-  std::unordered_map<uint64_t, std::string> substrings_ = {};
+  struct substring
+  {
+    std::string data;
+    bool is_last_substring;
+  };
+
+  std::unordered_map<uint64_t, substring> excerpts_ = {};
   uint64_t bytes_substrings_ = 0;
 
 public:
