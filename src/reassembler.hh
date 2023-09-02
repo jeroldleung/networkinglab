@@ -2,19 +2,20 @@
 
 #include "byte_stream.hh"
 
+#include <list>
 #include <string>
-#include <unordered_map>
 
 class Reassembler
 {
   struct substring
   {
-    std::string data;
-    bool is_last_substring;
+    uint64_t starti_;
+    std::string data_;
   };
 
-  std::unordered_map<uint64_t, substring> excerpts_ = {};
-  uint64_t bytes_substrings_ = 0;
+  std::list<substring> substrs_ = {};
+  uint64_t nbytes_substrs_ = 0;
+  bool should_close_ = false;
 
 public:
   /*
