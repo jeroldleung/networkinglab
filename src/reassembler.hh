@@ -3,10 +3,12 @@
 #include "byte_stream.hh"
 
 #include <string>
+#include <unordered_map>
 
 class Reassembler
 {
-  uint64_t bytes_substrings_;
+  std::unordered_map<uint64_t, std::string> substrings_ = {};
+  uint64_t bytes_substrings_ = 0;
 
 public:
   /*
