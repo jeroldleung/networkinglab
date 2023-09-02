@@ -6,6 +6,8 @@
 
 class Reassembler
 {
+  uint64_t bytes_substrings_;
+
 public:
   /*
    * Insert a new substring to be reassembled into a ByteStream.
