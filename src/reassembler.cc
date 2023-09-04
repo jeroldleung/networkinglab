@@ -18,7 +18,7 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
     output.push( std::move( data.erase( 0, output.bytes_pushed() - first_index ) ) );
   }
 
-  // list boundary
+  // edge cases
   if ( !data.empty() && ( substrs_.empty() || first_index <= substrs_.front().starti_ ) ) {
     nbytes_substrs_ += data.size();
     substrs_.emplace_front( first_index, std::move( data ) );

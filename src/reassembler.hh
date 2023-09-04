@@ -13,7 +13,7 @@ class Reassembler
     std::string data_;
   };
 
-  std::list<substring> substrs_ = {};
+  std::list<substring> substrs_ {};
   uint64_t nbytes_substrs_ = 0;
   bool should_close_ = false;
 
