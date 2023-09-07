@@ -21,7 +21,7 @@ void Writer::push( string data )
   // push to the stream buffer
   bytes_pushed_ += data.size();
   bytes_buffered_ += data.size();
-  buffer_.push( std::move( data ) );
+  buffer_.push( move( data ) );
 }
 
 void Writer::close()

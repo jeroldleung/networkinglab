@@ -15,7 +15,7 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
 
   // bytes that are the next bytes should be pushed to the stream immediately
   if ( output.bytes_pushed() >= first_index && output.bytes_pushed() < first_index + data.size() ) {
-    output.push( std::move( data.erase( 0, output.bytes_pushed() - first_index ) ) );
+    output.push( move( data.erase( 0, output.bytes_pushed() - first_index ) ) );
   }
 
   // prevent out of range
@@ -24,18 +24,18 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
   // edge cases
   if ( !data.empty() && substrs_.empty() ) {
     nbytes_substrs_ += data.size();
-    substrs_.emplace_front( first_index, std::move( data ) );
+    substrs_.emplace_front( first_index, move( data ) );
   }
   if ( !data.empty() && first_index > substrs_.back().starti_ ) {
     nbytes_substrs_ += data.size();
-    substrs_.emplace_back( first_index, std::move( data ) );
+    substrs_.emplace_back( first_index, move( data ) );
   }
 
   for ( auto iter = substrs_.begin(); iter != substrs_.end(); ) {
     // insert to the substrs_ until earlier bytes become known
     if ( !data.empty() && first_index <= iter->starti_ ) {
       nbytes_substrs_ += data.size();
-      iter = substrs_.insert( iter, { first_index, std::move( data ) } );
+      iter = substrs_.insert( iter, { first_index, move( data ) } );
     }
     // overlap with the previous one
     auto prev = std::prev( iter );
@@ -60,7 +60,7 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
   for ( auto iter = substrs_.begin(); iter != substrs_.end(); ) {
     if ( output.bytes_pushed() >= iter->starti_ ) {
       nbytes_substrs_ -= iter->data_.size();
-      output.push( std::move( iter->data_.erase( 0, output.bytes_pushed() - iter->starti_ ) ) );
+      output.push( move( iter->data_.erase( 0, output.bytes_pushed() - iter->starti_ ) ) );
       iter = substrs_.erase( iter );
     } else {
       ++iter;
