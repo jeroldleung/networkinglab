@@ -5,23 +5,31 @@ using namespace std;
 void TCPReceiver::receive( TCPSenderMessage message, Reassembler& reassembler, Writer& inbound_stream )
 {
   if ( message.SYN ) {
-    is_syned = true;
-    zero_point = message.seqno;
+    isn_ = message.seqno;
   }
 
-  reassembler.insert( message.SYN ? 0 : message.seqno.unwrap( zero_point, inbound_stream.bytes_pushed() ) - 1,
-                      message.payload.release(),
-                      message.FIN,
-                      inbound_stream );
+  if ( !isn_.has_value() ) {
+    return;
+  }
+
+  const uint64_t checkpoint = inbound_stream.bytes_pushed();
+  const uint64_t absolute_seqno = message.seqno.unwrap( isn_.value(), checkpoint );
+  const uint64_t first_index = message.SYN ? 0 : absolute_seqno - 1;
+
+  reassembler.insert( first_index, message.payload.release(), message.FIN, inbound_stream );
 }
 
 TCPReceiverMessage TCPReceiver::send( const Writer& inbound_stream ) const
 {
-  const uint16_t window_size = min( inbound_stream.available_capacity(), ( 1UL << 16 ) - 1 );
-  if ( !is_syned ) {
-    return TCPReceiverMessage { nullopt, window_size };
+  TCPReceiverMessage msg {};
+
+  const auto win_sz = inbound_stream.available_capacity();
+  msg.window_size = win_sz < UINT16_MAX ? win_sz : UINT16_MAX;
+
+  if ( isn_.has_value() ) {
+    const uint64_t absolute_seqno = inbound_stream.bytes_pushed() + 1 + inbound_stream.is_closed();
+    msg.ackno = Wrap32::wrap( absolute_seqno, isn_.value() );
   }
-  return TCPReceiverMessage {
-    Wrap32::wrap( inbound_stream.bytes_pushed() + is_syned + inbound_stream.is_closed(), zero_point ),
-    window_size };
+
+  return msg;
 }

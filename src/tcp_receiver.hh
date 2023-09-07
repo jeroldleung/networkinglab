@@ -6,8 +6,7 @@
 
 class TCPReceiver
 {
-  bool is_syned { false };
-  Wrap32 zero_point { 0 };
+  std::optional<Wrap32> isn_ {};
 
 public:
   /*
