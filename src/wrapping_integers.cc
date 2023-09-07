@@ -4,23 +4,20 @@ using namespace std;
 
 Wrap32 Wrap32::wrap( uint64_t n, Wrap32 zero_point )
 {
-  return zero_point + ( n & UINT32_MAX );
+  return zero_point + n;
 }
 
 uint64_t Wrap32::unwrap( Wrap32 zero_point, uint64_t checkpoint ) const
 {
-  uint64_t absolute_seqno
-    = ( static_cast<uint64_t>( raw_value_ ) + ( 1UL << 32 ) - zero_point.raw_value_ ) % ( 1UL << 32 );
+  constexpr uint64_t SL31 = 1UL << 31; // shift left 31 bits;
+  constexpr uint64_t SL32 = 1UL << 32; // shift left 32 bits;
 
-  absolute_seqno += ( checkpoint >> 32 ) * ( 1UL << 32 );
+  const Wrap32 ckpt32 = wrap( checkpoint, zero_point );
+  const uint64_t offset = raw_value_ - ckpt32.raw_value_;
 
-  if ( absolute_seqno < checkpoint ) {
-    absolute_seqno += ( 1UL << 32 );
+  if ( offset <= SL31 || checkpoint + offset < SL32 ) {
+    return checkpoint + offset;
   }
 
-  if ( checkpoint != 0 && absolute_seqno - checkpoint > ( 1UL << 31 ) ) {
-    absolute_seqno -= ( 1UL << 32 );
-  }
-
-  return absolute_seqno;
+  return checkpoint + offset - SL32;
 }
