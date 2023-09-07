@@ -7,7 +7,6 @@
 class TCPReceiver
 {
   bool is_syned { false };
-  bool is_fined { false };
   Wrap32 zero_point { 0 };
 
 public:

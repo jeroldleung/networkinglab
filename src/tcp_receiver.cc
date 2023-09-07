@@ -9,10 +9,6 @@ void TCPReceiver::receive( TCPSenderMessage message, Reassembler& reassembler, W
     zero_point = message.seqno;
   }
 
-  if ( is_syned && message.FIN ) {
-    is_fined = true;
-  }
-
   reassembler.insert( message.SYN ? 0 : message.seqno.unwrap( zero_point, inbound_stream.bytes_pushed() ) - 1,
                       message.payload.release(),
                       message.FIN,
@@ -21,9 +17,11 @@ void TCPReceiver::receive( TCPSenderMessage message, Reassembler& reassembler, W
 
 TCPReceiverMessage TCPReceiver::send( const Writer& inbound_stream ) const
 {
+  const uint16_t window_size = min( inbound_stream.available_capacity(), ( 1UL << 16 ) - 1 );
+  if ( !is_syned ) {
+    return TCPReceiverMessage { nullopt, window_size };
+  }
   return TCPReceiverMessage {
-    is_syned
-      ? make_optional<Wrap32>( Wrap32::wrap( inbound_stream.bytes_pushed() + is_syned + is_fined, zero_point ) )
-      : nullopt,
-    static_cast<uint16_t>( min( inbound_stream.available_capacity(), ( 1UL << 16 ) - 1 ) ) };
+    Wrap32::wrap( inbound_stream.bytes_pushed() + is_syned + inbound_stream.is_closed(), zero_point ),
+    window_size };
 }
