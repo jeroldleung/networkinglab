@@ -4,9 +4,14 @@ using namespace std;
 
 void Reassembler::insert( uint64_t first_index, string data, bool is_last_substring, Writer& output )
 {
-  // defensive check
+  // first index out of range
   if ( first_index >= output.bytes_pushed() + output.available_capacity() ) {
     return;
+  }
+
+  // data tail out of range
+  if ( first_index + data.size() > output.bytes_pushed() + output.available_capacity() ) {
+    data.resize( output.bytes_pushed() + output.available_capacity() - first_index );
   }
 
   if ( is_last_substring ) {
@@ -17,9 +22,6 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
   if ( output.bytes_pushed() >= first_index && output.bytes_pushed() < first_index + data.size() ) {
     output.push( move( data.erase( 0, output.bytes_pushed() - first_index ) ) );
   }
-
-  // prevent out of range
-  data.resize( min( data.size(), output.available_capacity() - first_index ) );
 
   // edge cases
   if ( !data.empty() && substrs_.empty() ) {
@@ -42,7 +44,7 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
     // some part overlapped
     if ( prev != substrs_.end() && iter->starti_ >= prev->starti_
          && iter->starti_ < prev->starti_ + prev->data_.size() ) {
-      const int nbytes_overlapped = min( prev->starti_ + prev->data_.size() - iter->starti_, iter->data_.size() );
+      const auto nbytes_overlapped = min( prev->starti_ + prev->data_.size() - iter->starti_, iter->data_.size() );
       nbytes_substrs_ -= nbytes_overlapped;
       iter->data_.erase( 0, nbytes_overlapped );
       iter->starti_ += nbytes_overlapped;
