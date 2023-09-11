@@ -4,10 +4,20 @@
 #include "tcp_receiver_message.hh"
 #include "tcp_sender_message.hh"
 
+#include <list>
+#include <queue>
+
 class TCPSender
 {
   Wrap32 isn_;
   uint64_t initial_RTO_ms_;
+
+  bool is_syned = false;
+  uint64_t window_size_ = 0;
+  uint64_t seqnos_sent_ = 0;
+  uint64_t seqnos_in_flight_ = 0;
+  std::list<TCPSenderMessage> outstanding_ {};
+  std::queue<TCPSenderMessage> ready_to_send_ {};
 
 public:
   /* Construct TCP sender with given default Retransmission Timeout and possible ISN */

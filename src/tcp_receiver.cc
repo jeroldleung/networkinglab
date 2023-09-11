@@ -21,7 +21,7 @@ void TCPReceiver::receive( TCPSenderMessage message, Reassembler& reassembler, W
 
 TCPReceiverMessage TCPReceiver::send( const Writer& inbound_stream ) const
 {
-  TCPReceiverMessage msg {};
+  TCPReceiverMessage msg;
 
   const auto win_sz = inbound_stream.available_capacity();
   msg.window_size = win_sz < UINT16_MAX ? win_sz : UINT16_MAX;
