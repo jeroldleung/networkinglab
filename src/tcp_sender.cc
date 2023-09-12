@@ -17,8 +17,7 @@ uint64_t TCPSender::sequence_numbers_in_flight() const
 
 uint64_t TCPSender::consecutive_retransmissions() const
 {
-  // Your code here.
-  return {};
+  return consecutive_retransmissions_num_;
 }
 
 optional<TCPSenderMessage> TCPSender::maybe_send()
@@ -86,10 +85,34 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
       ++iter;
     }
   }
+
+  // set RTO to initial value
+  // set consecutive retransmissions number back to 0
+  current_RTO_ms_ = initial_RTO_ms_;
+  consecutive_retransmissions_num_ = 0;
 }
 
 void TCPSender::tick( const size_t ms_since_last_tick )
 {
-  // Your code here.
-  (void)ms_since_last_tick;
+  time_passage_ += ms_since_last_tick;
+  if ( time_passage_ < current_RTO_ms_ ) {
+    return;
+  }
+
+  // retransmit
+  auto earliest = outstanding_.begin();
+  for ( auto iter = outstanding_.begin(); iter != outstanding_.end(); ++iter ) {
+    const auto absolute_seqno = iter->seqno.unwrap( isn_, seqnos_sent_ );
+    const auto earliest_seqno = earliest->seqno.unwrap( isn_, seqnos_sent_ );
+    earliest = absolute_seqno < earliest_seqno ? iter : earliest;
+  }
+  ready_to_send_.push( move( *earliest ) );
+  outstanding_.erase( earliest );
+
+  // slows down retransmissions on lousy networks to avoid further gumming up the works
+  time_passage_ = 0;
+  current_RTO_ms_ *= 2;
+
+  // increment consecutive retransmissions number
+  consecutive_retransmissions_num_ += 1;
 }

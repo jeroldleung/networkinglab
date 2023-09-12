@@ -11,6 +11,9 @@ class TCPSender
 {
   Wrap32 isn_;
   uint64_t initial_RTO_ms_;
+  uint64_t time_passage_ = 0;
+  uint64_t current_RTO_ms_ = initial_RTO_ms_;
+  uint64_t consecutive_retransmissions_num_ = 0;
 
   bool is_syned = false;
   uint64_t window_size_ = 0;
