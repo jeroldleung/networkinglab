@@ -53,6 +53,12 @@ void TCPSender::push( Reader& outbound_stream )
     window_size_ -= data.size();
   }
 
+  if ( outbound_stream.is_finished() && window_size_ > 0 ) {
+    sender_msg.seqno = Wrap32::wrap( seqnos_sent_, isn_ );
+    sender_msg.FIN = true;
+    window_size_ -= 1;
+  }
+
   if ( sender_msg.SYN || sender_msg.FIN || !sender_msg.payload.empty() ) {
     seqnos_sent_ += sender_msg.sequence_length();
     seqnos_in_flight_ += sender_msg.sequence_length();
