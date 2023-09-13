@@ -37,28 +37,33 @@ void TCPSender::push( Reader& outbound_stream )
 {
   TCPSenderMessage sender_msg;
 
-  if ( !is_syned ) {
-    is_syned = true;
+  // synchronize
+  if ( !is_syned_ ) {
+    is_syned_ = true;
     sender_msg.seqno = isn_;
     sender_msg.SYN = true;
   }
 
+  // payload
   string data;
   auto payload_size = min( TCPConfig::MAX_PAYLOAD_SIZE, window_size_ );
   if ( outbound_stream.bytes_buffered() ) {
     payload_size = min( payload_size, outbound_stream.peek().size() );
-    sender_msg.seqno = Wrap32::wrap( outbound_stream.bytes_popped() + is_syned, isn_ );
+    sender_msg.seqno = Wrap32::wrap( outbound_stream.bytes_popped() + is_syned_, isn_ );
     read( outbound_stream, payload_size, data );
     sender_msg.payload = data;
     window_size_ -= data.size();
   }
 
-  if ( outbound_stream.is_finished() && window_size_ > 0 ) {
+  // finish
+  if ( outbound_stream.is_finished() && window_size_ > 0 && !is_closed_ ) {
     sender_msg.seqno = Wrap32::wrap( seqnos_sent_, isn_ );
     sender_msg.FIN = true;
     window_size_ -= 1;
+    is_closed_ = true;
   }
 
+  // push to queue
   if ( sender_msg.SYN || sender_msg.FIN || !sender_msg.payload.empty() ) {
     seqnos_sent_ += sender_msg.sequence_length();
     seqnos_in_flight_ += sender_msg.sequence_length();
