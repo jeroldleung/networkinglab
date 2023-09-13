@@ -45,14 +45,19 @@ void TCPSender::push( Reader& outbound_stream )
   }
 
   // payload
-  string data;
-  auto payload_size = min( TCPConfig::MAX_PAYLOAD_SIZE, window_size_ );
-  if ( outbound_stream.bytes_buffered() ) {
+  while ( outbound_stream.bytes_buffered() && window_size_ > 0 ) {
+    string data;
+    auto payload_size = min( TCPConfig::MAX_PAYLOAD_SIZE, window_size_ );
+
     payload_size = min( payload_size, outbound_stream.peek().size() );
     sender_msg.seqno = Wrap32::wrap( outbound_stream.bytes_popped() + is_syned_, isn_ );
     read( outbound_stream, payload_size, data );
     sender_msg.payload = data;
     window_size_ -= data.size();
+
+    if ( payload_size == TCPConfig::MAX_PAYLOAD_SIZE ) {
+      ready_to_send_.push( move( sender_msg ) );
+    }
   }
 
   // finish
