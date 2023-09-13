@@ -99,6 +99,7 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
     if ( absolute_seqend <= absolute_ackno ) {
       seqnos_in_flight_ -= iter->sequence_length();
       iter = outstanding_.erase( iter );
+      time_passage_ = 0; // restart timer
     } else {
       ++iter;
     }
