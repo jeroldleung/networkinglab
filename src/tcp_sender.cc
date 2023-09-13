@@ -55,7 +55,10 @@ void TCPSender::push( Reader& outbound_stream )
     sender_msg.payload = data;
     window_size_ -= data.size();
 
-    if ( payload_size == TCPConfig::MAX_PAYLOAD_SIZE ) {
+    // generate many TCPSenderMessage
+    if ( payload_size == TCPConfig::MAX_PAYLOAD_SIZE && !outbound_stream.is_finished() ) {
+      seqnos_sent_ += sender_msg.sequence_length();
+      seqnos_in_flight_ += sender_msg.sequence_length();
       ready_to_send_.push( move( sender_msg ) );
     }
   }
