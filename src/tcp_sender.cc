@@ -80,9 +80,16 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
     return;
   }
 
+  const auto absolute_ackno = msg.ackno.value().unwrap( isn_, seqnos_sent_ );
+
+  // ignore ackno that beyond next seqno
+  const auto absolute_seqno = ( isn_ + seqnos_sent_ ).unwrap( isn_, seqnos_sent_ );
+  if ( absolute_ackno > absolute_seqno ) {
+    return;
+  }
+
   // remove the outstanding segment that has fully acknowledged
   for ( auto iter = outstanding_.begin(); iter != outstanding_.end(); ) {
-    const auto absolute_ackno = msg.ackno.value().unwrap( isn_, seqnos_sent_ );
     const auto absolute_seqend = iter->seqno.unwrap( isn_, seqnos_sent_ ) + iter->sequence_length();
     if ( absolute_seqend <= absolute_ackno ) {
       seqnos_in_flight_ -= iter->sequence_length();
