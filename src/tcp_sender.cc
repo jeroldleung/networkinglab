@@ -110,6 +110,9 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
     }
   }
 
+  // don't move the window if sent segments are not fully acknowledged
+  window_size_ = window_size_ > seqnos_in_flight_ ? window_size_ - seqnos_in_flight_ : 0;
+
   // set RTO to initial value
   // set consecutive retransmissions number back to 0
   current_RTO_ms_ = initial_RTO_ms_;
