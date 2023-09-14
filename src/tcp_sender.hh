@@ -27,16 +27,13 @@ class TCPSender
   Wrap32 isn_;
   uint64_t initial_RTO_ms_;
 
-  uint64_t consecutive_retransmissions_num_ = 0;
+  bool syn_ = false;
+  bool fin_ = false;
+  uint16_t window_size_ = 1;
+  uint64_t retransmissions_ = 0;
 
-  bool is_syned_ = false;
-  bool is_closed_ = false;
-  bool sepcial_case_ = false;
-  bool back_off_RTO_ = true;
-  std::optional<uint64_t> window_size_ {};
-  uint64_t available_window_size_ = 0;
-  uint64_t seqnos_sent_ = 0;
-  uint64_t seqnos_in_flight_ = 0;
+  uint64_t seqnums_sent_ = 0;
+  uint64_t seqnums_in_flight_ = 0;
   std::list<TCPSenderMessage> outstanding_ {};
   std::queue<TCPSenderMessage> ready_to_send_ {};
 
