@@ -7,12 +7,26 @@
 #include <list>
 #include <queue>
 
+class RTOTimer
+{
+  uint64_t rto_;
+  size_t time_passage_ = 0;
+
+public:
+  explicit RTOTimer( uint64_t initial_rto ) : rto_( initial_rto ) {}
+
+  void start() { time_passage_ = 0; }
+  void set_rto( const uint64_t current_rto ) { rto_ = current_rto; }
+  void tick( const size_t ms ) { time_passage_ += ms; }
+  bool is_expired() const { return time_passage_ >= rto_ ? true : false; }
+  void double_rto() { rto_ *= 2; }
+};
+
 class TCPSender
 {
   Wrap32 isn_;
   uint64_t initial_RTO_ms_;
-  uint64_t time_passage_ = 0;
-  uint64_t current_RTO_ms_ = initial_RTO_ms_;
+
   uint64_t consecutive_retransmissions_num_ = 0;
 
   bool is_syned_ = false;
@@ -25,6 +39,8 @@ class TCPSender
   uint64_t seqnos_in_flight_ = 0;
   std::list<TCPSenderMessage> outstanding_ {};
   std::queue<TCPSenderMessage> ready_to_send_ {};
+
+  RTOTimer timer { initial_RTO_ms_ };
 
 public:
   /* Construct TCP sender with given default Retransmission Timeout and possible ISN */

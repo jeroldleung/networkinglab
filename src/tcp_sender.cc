@@ -120,7 +120,7 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
     if ( absolute_seqend <= absolute_ackno ) {
       seqnos_in_flight_ -= iter->sequence_length();
       iter = outstanding_.erase( iter );
-      time_passage_ = 0; // restart timer
+      timer.start();
     } else {
       ++iter;
     }
@@ -131,14 +131,14 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
 
   // set RTO to initial value
   // set consecutive retransmissions number back to 0
-  current_RTO_ms_ = initial_RTO_ms_;
+  timer.set_rto( initial_RTO_ms_ );
   consecutive_retransmissions_num_ = 0;
 }
 
 void TCPSender::tick( const size_t ms_since_last_tick )
 {
-  time_passage_ += ms_since_last_tick;
-  if ( time_passage_ < current_RTO_ms_ ) {
+  timer.tick( ms_since_last_tick );
+  if ( !timer.is_expired() ) {
     return;
   }
 
@@ -158,9 +158,9 @@ void TCPSender::tick( const size_t ms_since_last_tick )
   outstanding_.erase( earliest );
 
   // slows down retransmissions on lousy networks to avoid further gumming up the works
-  time_passage_ = 0;
+  timer.start();
   if ( back_off_RTO_ ) {
-    current_RTO_ms_ *= 2;
+    timer.double_rto();
   }
 
   // increment consecutive retransmissions number
