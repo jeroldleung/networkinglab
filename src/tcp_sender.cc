@@ -44,16 +44,22 @@ void TCPSender::push( Reader& outbound_stream )
     sender_msg.SYN = true;
   }
 
+  // sepcial case: receive window size is 0
+  if ( sepcial_case_ ) {
+    available_window_size_ = 1;
+    sepcial_case_ = false;
+  }
+
   // payload
-  while ( outbound_stream.bytes_buffered() && window_size_ > 0 ) {
+  while ( outbound_stream.bytes_buffered() && available_window_size_ > 0 ) {
     string data;
-    auto payload_size = min( TCPConfig::MAX_PAYLOAD_SIZE, window_size_ );
+    auto payload_size = min( TCPConfig::MAX_PAYLOAD_SIZE, available_window_size_ );
 
     payload_size = min( payload_size, outbound_stream.peek().size() );
     sender_msg.seqno = Wrap32::wrap( outbound_stream.bytes_popped() + is_syned_, isn_ );
     read( outbound_stream, payload_size, data );
     sender_msg.payload = data;
-    window_size_ -= data.size();
+    available_window_size_ -= data.size();
 
     // generate many TCPSenderMessage
     if ( payload_size == TCPConfig::MAX_PAYLOAD_SIZE && !outbound_stream.is_finished() ) {
@@ -64,10 +70,10 @@ void TCPSender::push( Reader& outbound_stream )
   }
 
   // finish
-  if ( outbound_stream.is_finished() && window_size_ > 0 && !is_closed_ ) {
+  if ( outbound_stream.is_finished() && available_window_size_ > 0 && !is_closed_ ) {
     sender_msg.seqno = Wrap32::wrap( seqnos_sent_, isn_ );
     sender_msg.FIN = true;
-    window_size_ -= 1;
+    available_window_size_ -= 1;
     is_closed_ = true;
   }
 
@@ -88,6 +94,13 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
 {
   // update the window size
   window_size_ = msg.window_size;
+  available_window_size_ = msg.window_size;
+  if ( window_size_.value() == 0 ) {
+    sepcial_case_ = true;
+    back_off_RTO_ = false;
+  } else {
+    back_off_RTO_ = true;
+  }
 
   if ( !msg.ackno.has_value() ) {
     return;
@@ -114,7 +127,7 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   }
 
   // don't move the window if sent segments are not fully acknowledged
-  window_size_ = window_size_ > seqnos_in_flight_ ? window_size_ - seqnos_in_flight_ : 0;
+  available_window_size_ = window_size_.value() > seqnos_in_flight_ ? window_size_.value() - seqnos_in_flight_ : 0;
 
   // set RTO to initial value
   // set consecutive retransmissions number back to 0
@@ -141,7 +154,9 @@ void TCPSender::tick( const size_t ms_since_last_tick )
 
   // slows down retransmissions on lousy networks to avoid further gumming up the works
   time_passage_ = 0;
-  current_RTO_ms_ *= 2;
+  if ( back_off_RTO_ ) {
+    current_RTO_ms_ *= 2;
+  }
 
   // increment consecutive retransmissions number
   consecutive_retransmissions_num_ += 1;

@@ -17,7 +17,10 @@ class TCPSender
 
   bool is_syned_ = false;
   bool is_closed_ = false;
-  uint64_t window_size_ = 0;
+  bool sepcial_case_ = false;
+  bool back_off_RTO_ = true;
+  std::optional<uint64_t> window_size_ {};
+  uint64_t available_window_size_ = 0;
   uint64_t seqnos_sent_ = 0;
   uint64_t seqnos_in_flight_ = 0;
   std::list<TCPSenderMessage> outstanding_ {};
