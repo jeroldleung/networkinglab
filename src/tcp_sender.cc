@@ -142,6 +142,11 @@ void TCPSender::tick( const size_t ms_since_last_tick )
     return;
   }
 
+  // nothing to retransmit
+  if ( outstanding_.empty() ) {
+    return;
+  }
+
   // retransmit
   auto earliest = outstanding_.begin();
   for ( auto iter = outstanding_.begin(); iter != outstanding_.end(); ++iter ) {
