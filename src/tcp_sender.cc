@@ -26,10 +26,10 @@ optional<TCPSenderMessage> TCPSender::maybe_send()
     return {};
   }
 
-  outstanding_.push_back( move( ready_to_send_.front() ) );
+  TCPSenderMessage sender_msg = ready_to_send_.front();
   ready_to_send_.pop();
 
-  return outstanding_.back();
+  return sender_msg;
 }
 
 void TCPSender::push( Reader& outbound_stream )
@@ -64,7 +64,8 @@ void TCPSender::push( Reader& outbound_stream )
     }
 
     seqnums_sent_ += sender_msg.sequence_length();
-    ready_to_send_.push( move( sender_msg ) );
+    outstanding_.push( sender_msg );
+    ready_to_send_.push( sender_msg );
 
     if ( sender_msg.FIN || outbound_stream.bytes_buffered() == 0 ) {
       break;
@@ -94,14 +95,15 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   }
 
   // remove the outstanding segment that has fully acknowledged
-  for ( auto iter = outstanding_.begin(); iter != outstanding_.end(); ) {
-    const auto segment_end = iter->seqno.unwrap( isn_, seqnums_sent_ ) + iter->sequence_length();
+  while ( !outstanding_.empty() ) {
+    const auto segment_end
+      = outstanding_.front().seqno.unwrap( isn_, seqnums_sent_ ) + outstanding_.front().sequence_length();
     if ( segment_end <= absolute_ackno ) {
-      seqnums_in_flight_ -= iter->sequence_length();
-      iter = outstanding_.erase( iter );
+      seqnums_in_flight_ -= outstanding_.front().sequence_length();
+      outstanding_.pop();
       timer.start();
     } else {
-      ++iter;
+      break;
     }
   }
 
@@ -119,14 +121,7 @@ void TCPSender::tick( const size_t ms_since_last_tick )
   }
 
   // retransmit
-  auto earliest = outstanding_.begin();
-  for ( auto iter = outstanding_.begin(); iter != outstanding_.end(); ++iter ) {
-    const auto absolute_seqno = iter->seqno.unwrap( isn_, seqnums_sent_ );
-    const auto earliest_seqno = earliest->seqno.unwrap( isn_, seqnums_sent_ );
-    earliest = absolute_seqno < earliest_seqno ? iter : earliest;
-  }
-  ready_to_send_.push( move( *earliest ) );
-  outstanding_.erase( earliest );
+  ready_to_send_.push( outstanding_.front() );
 
   // slows down retransmissions on lousy networks to avoid further gumming up the works
   timer.start();

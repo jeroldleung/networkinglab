@@ -4,7 +4,6 @@
 #include "tcp_receiver_message.hh"
 #include "tcp_sender_message.hh"
 
-#include <list>
 #include <queue>
 
 class RTOTimer
@@ -34,7 +33,7 @@ class TCPSender
 
   uint64_t seqnums_sent_ = 0;
   uint64_t seqnums_in_flight_ = 0;
-  std::list<TCPSenderMessage> outstanding_ {};
+  std::queue<TCPSenderMessage> outstanding_ {};
   std::queue<TCPSenderMessage> ready_to_send_ {};
 
   RTOTimer timer { initial_RTO_ms_ };
