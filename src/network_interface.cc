@@ -23,35 +23,38 @@ NetworkInterface::NetworkInterface( const EthernetAddress& ethernet_address, con
 void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Address& next_hop )
 {
   auto mapping = arp_table_.find( next_hop.ipv4_numeric() );
-  EthernetFrame ef;
 
+  // pending mappings last five seconds
+  if ( mapping != arp_table_.end() && mapping->second.first == ETHERNET_BROADCAST
+       && mapping->second.second < 5000 ) {
+    return;
+  }
+
+  EthernetFrame ef;
   ef.payload = serialize( dgram );
 
-  if ( mapping != arp_table_.end() ) {
-    // destination Ethernet address is already known
+  // destination Ethernet address is already known
+  if ( mapping != arp_table_.end() && mapping->second.first != ETHERNET_BROADCAST ) {
     ef.header = { mapping->second.first, ethernet_address_, EthernetHeader::TYPE_IPv4 };
     ready_to_send_.push( ef );
     return;
-  } else {
-    // destination Ethernet address is unknown
-    ef.header = { ETHERNET_BROADCAST, ethernet_address_, EthernetHeader::TYPE_IPv4 };
-    unknown_eth_addr_.push_back( make_pair( next_hop.ipv4_numeric(), ef ) );
   }
 
-  if ( mapping == arp_table_.end() || arp_sent_passage_ > 5000 ) {
+  // destination Ethernet address is unknown
+  arp_table_[next_hop.ipv4_numeric()] = make_pair( ETHERNET_BROADCAST, 0 );
+  ef.header = { ETHERNET_BROADCAST, ethernet_address_, EthernetHeader::TYPE_IPv4 };
+  unknown_eth_addr_.push_back( make_pair( next_hop.ipv4_numeric(), ef ) );
 
-    // send an arp broadcast message if 5 seconds have passed
-    ARPMessage arpmsg_request = {
-      .opcode = ARPMessage::OPCODE_REQUEST,
-      .sender_ethernet_address = ethernet_address_,
-      .sender_ip_address = ip_address_.ipv4_numeric(),
-      .target_ip_address = next_hop.ipv4_numeric(),
-    };
-    ef.header = { ETHERNET_BROADCAST, ethernet_address_, EthernetHeader::TYPE_ARP };
-    ef.payload = serialize( arpmsg_request );
-    arp_sent_passage_ = 0;
-    ready_to_send_.push( ef );
-  }
+  // send an arp request
+  ARPMessage arpmsg_request = {
+    .opcode = ARPMessage::OPCODE_REQUEST,
+    .sender_ethernet_address = ethernet_address_,
+    .sender_ip_address = ip_address_.ipv4_numeric(),
+    .target_ip_address = next_hop.ipv4_numeric(),
+  };
+  ef.header = { ETHERNET_BROADCAST, ethernet_address_, EthernetHeader::TYPE_ARP };
+  ef.payload = serialize( arpmsg_request );
+  ready_to_send_.push( ef );
 }
 
 // frame: the incoming Ethernet frame
@@ -105,8 +108,6 @@ optional<InternetDatagram> NetworkInterface::recv_frame( const EthernetFrame& fr
 // ms_since_last_tick: the number of milliseconds since the last call to this method
 void NetworkInterface::tick( const size_t ms_since_last_tick )
 {
-  arp_sent_passage_ += ms_since_last_tick;
-
   for ( auto iter = arp_table_.begin(); iter != arp_table_.end(); ) {
     iter->second.second += ms_since_last_tick;
     if ( iter->second.second > 300000 ) {
