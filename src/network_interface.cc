@@ -110,7 +110,7 @@ void NetworkInterface::tick( const size_t ms_since_last_tick )
 {
   for ( auto iter = arp_table_.begin(); iter != arp_table_.end(); ) {
     iter->second.second += ms_since_last_tick;
-    if ( iter->second.second > 300000 ) {
+    if ( iter->second.second > 30000 ) {
       // IP-to-Ethernet mappings that have expired
       iter = arp_table_.erase( iter );
     } else {
