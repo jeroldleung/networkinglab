@@ -71,10 +71,8 @@ optional<InternetDatagram> NetworkInterface::recv_frame( const EthernetFrame& fr
     // learn mapping
     arp_table_[arpmsg.sender_ip_address] = make_pair( arpmsg.sender_ethernet_address, 0 );
 
-    // asking for our IP address
-    auto iter = arp_table_.find( arpmsg.target_ip_address );
-    if ( arpmsg.opcode == ARPMessage::OPCODE_REQUEST && iter != arp_table_.end() ) {
-      // send an arp reply
+    // asking for our ethernet address and send an arp reply
+    if ( arpmsg.opcode == ARPMessage::OPCODE_REQUEST && arpmsg.target_ip_address == ip_address_.ipv4_numeric() ) {
       EthernetFrame ef;
       ARPMessage arpmsg_reply = {
         .opcode = ARPMessage::OPCODE_REPLY,
