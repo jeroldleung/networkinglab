@@ -44,6 +44,7 @@ private:
   std::unordered_map<uint32_t, std::pair<EthernetAddress, size_t>> arp_table_ {};
   std::queue<EthernetFrame> ready_to_send_ {};
   size_t arp_sent_passage_ = 0;
+  std::list<std::pair<uint32_t, EthernetFrame>> unknown_eth_addr_ {};
 
 public:
   // Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer)

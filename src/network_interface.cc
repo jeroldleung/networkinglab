@@ -25,12 +25,21 @@ void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Addre
   auto mapping = arp_table_.find( next_hop.ipv4_numeric() );
   EthernetFrame ef;
 
+  ef.payload = serialize( dgram );
+
   if ( mapping != arp_table_.end() ) {
     // destination Ethernet address is already known
     ef.header = { mapping->second.first, ethernet_address_, EthernetHeader::TYPE_IPv4 };
-    ef.payload = serialize( dgram );
-  } else if ( mapping == arp_table_.end() || arp_sent_passage_ > 5000 ) {
+    ready_to_send_.push( ef );
+    return;
+  } else {
     // destination Ethernet address is unknown
+    ef.header = { ETHERNET_BROADCAST, ethernet_address_, EthernetHeader::TYPE_IPv4 };
+    unknown_eth_addr_.push_back( make_pair( next_hop.ipv4_numeric(), ef ) );
+  }
+
+  if ( mapping == arp_table_.end() || arp_sent_passage_ > 5000 ) {
+
     // send an arp broadcast message if 5 seconds have passed
     ARPMessage arpmsg_request = {
       .opcode = ARPMessage::OPCODE_REQUEST,
@@ -41,11 +50,8 @@ void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Addre
     ef.header = { ETHERNET_BROADCAST, ethernet_address_, EthernetHeader::TYPE_ARP };
     ef.payload = serialize( arpmsg_request );
     arp_sent_passage_ = 0;
-  } else {
-    return;
+    ready_to_send_.push( ef );
   }
-
-  ready_to_send_.push( ef );
 }
 
 // frame: the incoming Ethernet frame
@@ -60,10 +66,13 @@ optional<InternetDatagram> NetworkInterface::recv_frame( const EthernetFrame& fr
   // arp
   ARPMessage arpmsg;
   if ( frame.header.type == EthernetHeader::TYPE_ARP && parse( arpmsg, frame.payload ) ) {
+    // learn mapping
     arp_table_[arpmsg.sender_ip_address] = make_pair( arpmsg.sender_ethernet_address, 0 );
-    auto iter = arp_table_.find( arpmsg.target_ip_address );
+
     // asking for our IP address
+    auto iter = arp_table_.find( arpmsg.target_ip_address );
     if ( arpmsg.opcode == ARPMessage::OPCODE_REQUEST && iter != arp_table_.end() ) {
+      // send an arp reply
       EthernetFrame ef;
       ARPMessage arpmsg_reply = {
         .opcode = ARPMessage::OPCODE_REPLY,
@@ -75,6 +84,18 @@ optional<InternetDatagram> NetworkInterface::recv_frame( const EthernetFrame& fr
       ef.header = { arpmsg.sender_ethernet_address, ethernet_address_, EthernetHeader::TYPE_ARP };
       ef.payload = serialize( arpmsg_reply );
       ready_to_send_.push( ef );
+    }
+  }
+
+  // got the target ethernet address
+  for ( auto iter = unknown_eth_addr_.begin(); iter != unknown_eth_addr_.end(); ) {
+    auto mapping = arp_table_.find( iter->first );
+    if ( mapping != arp_table_.end() ) {
+      iter->second.header.dst = mapping->second.first;
+      ready_to_send_.push( iter->second );
+      iter = unknown_eth_addr_.erase( iter );
+    } else {
+      ++iter;
     }
   }
 
