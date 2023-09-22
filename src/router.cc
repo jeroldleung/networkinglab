@@ -20,10 +20,7 @@ void Router::add_route( const uint32_t route_prefix,
        << static_cast<int>( prefix_length ) << " => " << ( next_hop.has_value() ? next_hop->ip() : "(direct)" )
        << " on interface " << interface_num << "\n";
 
-  (void)route_prefix;
-  (void)prefix_length;
-  (void)next_hop;
-  (void)interface_num;
+  routing_table_.emplace_back( route_prefix, prefix_length, next_hop, interface_num );
 }
 
 void Router::route() {}
