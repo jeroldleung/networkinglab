@@ -49,9 +49,12 @@ void Router::route()
     if ( match_entry == routing_table_.end() )
       continue;
 
+    // recompute header checksum after decrement ttl
+    datagram.value().header.compute_checksum();
+
     // found the match entry, route datagram to the target interface
     interface( match_entry->interface_num )
-      .send_datagram( datagram.value(),
+      .send_datagram( move( datagram.value() ),
                       match_entry->next_hop.value_or( Address::from_ipv4_numeric( datagram.value().header.dst ) ) );
   }
 }
