@@ -63,7 +63,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame( const EthernetFrame& fr
   // IPv4
   InternetDatagram ipmsg;
   if ( frame.header.type == EthernetHeader::TYPE_IPv4 && parse( ipmsg, frame.payload ) ) {
-    if ( frame.header.dst == ethernet_address_ || ipmsg.header.dst == ip_address_.ipv4_numeric() ) {
+    if ( frame.header.dst == ethernet_address_ ) {
       return ipmsg;
     }
   }
