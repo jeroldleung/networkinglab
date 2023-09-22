@@ -36,8 +36,16 @@ void Router::route()
     // find the "longest-prefix match" entry
     vector<Entry>::const_iterator match_entry = routing_table_.end();
     for ( auto iter = routing_table_.begin(); iter != routing_table_.end(); ++iter ) {
+      uint32_t dst_prefix = datagram.value().header.dst;
+      // prevent the undefine behavior that shift a 32-bit integer by 32 bits
+      if ( iter->prefix_length == 0 ) {
+        dst_prefix = 0;
+      } else {
+        dst_prefix >>= 32 - iter->prefix_length;
+        dst_prefix <<= 32 - iter->prefix_length;
+      }
       // match the route prefix
-      if ( ( iter->route_prefix & datagram.value().header.dst ) == iter->route_prefix ) {
+      if ( dst_prefix == iter->route_prefix ) {
         // the longest-prefix
         if ( match_entry == routing_table_.end() || match_entry->prefix_length < iter->prefix_length ) {
           match_entry = iter;
