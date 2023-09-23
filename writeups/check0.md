@@ -1,22 +1,9 @@
-Checkpoint 0 Writeup
-====================
+# Checkpoint 0 Writeup
 
-My name: [your name here]
+- **webget**: a simple network application using OS stream socket to fetch a web page.
+- **ByteStream**: a abstraction of a reliable byte stream in communicating across the unreliable Internet.
 
-My SUNet ID: [your sunetid here]
+## Program Structure
 
-I collaborated with: [list sunetids here]
+ByteStream is an object with Reader and Writer interfaces. Bytes can be written on the input side and can be read, in the same sequence, from the output side. The ByteStream has in-memory buffer and capacity for storing data, which we use `queue` for the buffer. The Writer `push` data to the buffer while the Reader `pop` data from the buffer.
 
-I would like to credit/thank these classmates for their help: [list sunetids here]
-
-This lab took me about [n] hours to do. I [did/did not] attend the lab session.
-
-My secret code from section 2.1 was: [code here]
-
-- Optional: I had unexpected difficulty with: [describe]
-
-- Optional: I think you could make this lab better by: [describe]
-
-- Optional: I was surprised by: [describe]
-
-- Optional: I'm not sure about: [describe]
